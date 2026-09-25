@@ -10,26 +10,36 @@ async function resilientFetch(
   init?: RequestInit,
 ): Promise<Response> {
   let lastError: unknown;
+  const delays = [500, 1000, 2000, 4000];
 
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
-      const response = await fetch(input, init);
+      const response = await fetch(input, {
+        ...init,
+        signal: init?.signal ?? AbortSignal.timeout(30_000),
+      });
       const retryable = [429, 500, 502, 503, 504].includes(response.status);
-      if (!retryable || attempt === 2) return response;
+      if (!retryable || attempt === 4) return response;
     } catch (error) {
       lastError = error;
-      if (attempt === 2) break;
+      if (attempt === 4) break;
     }
 
     await new Promise((resolve) =>
-      setTimeout(resolve, 300 * Math.pow(2, attempt)),
+      setTimeout(resolve, delays[Math.min(attempt, delays.length - 1)]),
     );
   }
 
-  throw new Error(
-    "External network request failed: " +
-      (lastError instanceof Error ? lastError.message : "unknown error"),
-  );
+  let host = input;
+  try {
+    host = new URL(input).hostname;
+  } catch {
+    // Preserve the original input when it is not a URL.
+  }
+
+  const detail =
+    lastError instanceof Error ? lastError.message : String(lastError);
+  throw new Error("Network request failed for " + host + ": " + detail);
 }
 
 function demoResult(input: AgentRequest): AgentResult {
@@ -151,7 +161,7 @@ async function inferOfficialDomains(repoUrl: string): Promise<string[]> {
     const [owner, repo] = url.pathname.split("/").filter(Boolean);
     if (!owner || !repo) return [...domains];
 
-    const response = await fetch(
+    const response = await resilientFetch(
       "https://api.github.com/repos/" +
         encodeURIComponent(owner) +
         "/" +
@@ -193,7 +203,7 @@ async function tavilySearch(
   };
   if (!apiKey) headers["X-Tavily-Access-Mode"] = "keyless";
 
-  const response = await fetch(TAVILY_URL, {
+  const response = await resilientFetch(TAVILY_URL, {
     method: "POST",
     headers,
     body: JSON.stringify({
@@ -231,10 +241,13 @@ async function researchIncident(input: AgentRequest): Promise<ResearchSource[]> 
     " official migration guide changelog breaking change current documentation";
 
   const officialDomains = await inferOfficialDomains(input.repoUrl);
-  const [official, broad] = await Promise.all([
-    tavilySearch(query, officialDomains),
-    tavilySearch(query),
-  ]);
+  let official: TavilyItem[] = [];
+  try {
+    official = await tavilySearch(query, officialDomains);
+  } catch {
+    // Official-source pass is best-effort; broad research can still proceed.
+  }
+  const broad = await tavilySearch(query);
 
   const officialSet = new Set(officialDomains);
   const trustScore = (item: TavilyItem) => {
@@ -329,7 +342,7 @@ async function reasonWithNemotron(
     'For tests, status must be "planned" unless the prompt itself contains actual execution output.',
   ].join("\n");
 
-  const response = await fetch(baseUrl + "/chat/completions", {
+  const response = await resilientFetch(baseUrl + "/chat/completions", {
     method: "POST",
     headers: {
       Authorization: "Bearer " + apiKey,
