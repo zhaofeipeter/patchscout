@@ -177,7 +177,9 @@ async function tavilySearch(
       max_results: includeDomains?.length ? 5 : 6,
       include_answer: false,
       include_raw_content: false,
-      ...(includeDomains?.length ? { include_domains: includeDomains } : {}),
+      ...(includeDomains?.length
+        ? { include_domains: includeDomains, include_domains_mode: "restrict" }
+        : {}),
     }),
     cache: "no-store",
   });
