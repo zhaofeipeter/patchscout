@@ -109,13 +109,14 @@ function demoResult(input: AgentRequest): AgentResult {
 
 async function researchIncident(input: AgentRequest): Promise<ResearchSource[]> {
   const apiKey = process.env.TAVILY_API_KEY;
-  if (!apiKey) throw new Error("TAVILY_API_KEY is not configured.");
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (!apiKey) headers["X-Tavily-Access-Mode"] = "keyless";
 
   const response = await fetch(TAVILY_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({
-      api_key: apiKey,
+      ...(apiKey ? { api_key: apiKey } : {}),
       query:
         input.incident +
         " official migration guide changelog breaking change current documentation",
@@ -307,7 +308,6 @@ async function reasonWithNemotron(
 export async function runPatchScout(input: AgentRequest): Promise<AgentResult> {
   const live =
     process.env.PATCHSCOUT_MODE === "live" &&
-    Boolean(process.env.TAVILY_API_KEY) &&
     Boolean(process.env.NEBIUS_API_KEY);
 
   if (!live) return demoResult(input);
