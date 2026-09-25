@@ -107,9 +107,63 @@ function demoResult(input: AgentRequest): AgentResult {
   };
 }
 
-async function researchIncident(input: AgentRequest): Promise<ResearchSource[]> {
+type TavilyItem = {
+  title?: string;
+  url?: string;
+  content?: string;
+  score?: number;
+};
+
+async function inferOfficialDomains(repoUrl: string): Promise<string[]> {
+  const domains = new Set<string>(["github.com"]);
+
+  try {
+    const url = new URL(repoUrl);
+    if (url.hostname !== "github.com") return [...domains];
+
+    const [owner, repo] = url.pathname.split("/").filter(Boolean);
+    if (!owner || !repo) return [...domains];
+
+    const response = await fetch(
+      "https://api.github.com/repos/" +
+        encodeURIComponent(owner) +
+        "/" +
+        encodeURIComponent(repo.replace(/\.git$/, "")),
+      {
+        headers: {
+          Accept: "application/vnd.github+json",
+          "User-Agent": "PatchScout/1.0",
+        },
+        cache: "no-store",
+      },
+    );
+
+    if (!response.ok) return [...domains];
+
+    const metadata = (await response.json()) as { homepage?: string | null };
+    if (metadata.homepage) {
+      try {
+        const homepage = new URL(metadata.homepage);
+        if (homepage.hostname) domains.add(homepage.hostname);
+      } catch {
+        // Ignore malformed repository homepage metadata.
+      }
+    }
+  } catch {
+    // A malformed repo URL should not block broad research.
+  }
+
+  return [...domains];
+}
+
+async function tavilySearch(
+  query: string,
+  includeDomains?: string[],
+): Promise<TavilyItem[]> {
   const apiKey = process.env.TAVILY_API_KEY;
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
   if (!apiKey) headers["X-Tavily-Access-Mode"] = "keyless";
 
   const response = await fetch(TAVILY_URL, {
@@ -117,14 +171,13 @@ async function researchIncident(input: AgentRequest): Promise<ResearchSource[]> 
     headers,
     body: JSON.stringify({
       ...(apiKey ? { api_key: apiKey } : {}),
-      query:
-        input.incident +
-        " official migration guide changelog breaking change current documentation",
+      query,
       search_depth: "advanced",
       topic: "general",
-      max_results: 6,
+      max_results: includeDomains?.length ? 5 : 6,
       include_answer: false,
       include_raw_content: false,
+      ...(includeDomains?.length ? { include_domains: includeDomains } : {}),
     }),
     cache: "no-store",
   });
@@ -139,24 +192,38 @@ async function researchIncident(input: AgentRequest): Promise<ResearchSource[]> 
     );
   }
 
-  const data = (await response.json()) as {
-    results?: Array<{
-      title?: string;
-      url?: string;
-      content?: string;
-      score?: number;
-    }>;
-  };
+  const data = (await response.json()) as { results?: TavilyItem[] };
+  return data.results || [];
+}
 
-  return (data.results || [])
-    .filter((item) => item.title && item.url)
-    .slice(0, 6)
-    .map((item) => ({
-      title: item.title || "Source",
-      url: item.url || "",
+async function researchIncident(input: AgentRequest): Promise<ResearchSource[]> {
+  const query =
+    input.incident +
+    " official migration guide changelog breaking change current documentation";
+
+  const officialDomains = await inferOfficialDomains(input.repoUrl);
+  const [official, broad] = await Promise.all([
+    tavilySearch(query, officialDomains),
+    tavilySearch(query),
+  ]);
+
+  const merged = [...official, ...broad];
+  const seen = new Set<string>();
+  const sources: ResearchSource[] = [];
+
+  for (const item of merged) {
+    if (!item.title || !item.url || seen.has(item.url)) continue;
+    seen.add(item.url);
+    sources.push({
+      title: item.title,
+      url: item.url,
       snippet: (item.content || "").slice(0, 900),
       score: item.score,
-    }));
+    });
+    if (sources.length >= 8) break;
+  }
+
+  return sources;
 }
 
 function parseJsonObject(text: string): Record<string, unknown> {
