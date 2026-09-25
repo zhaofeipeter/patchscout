@@ -5,6 +5,33 @@ const TAVILY_URL = "https://api.tavily.com/search";
 const NEBIUS_BASE_URL = "https://api.tokenfactory.nebius.com/v1";
 const DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b";
 
+async function resilientFetch(
+  input: string,
+  init?: RequestInit,
+): Promise<Response> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const response = await fetch(input, init);
+      const retryable = [429, 500, 502, 503, 504].includes(response.status);
+      if (!retryable || attempt === 2) return response;
+    } catch (error) {
+      lastError = error;
+      if (attempt === 2) break;
+    }
+
+    await new Promise((resolve) =>
+      setTimeout(resolve, 300 * Math.pow(2, attempt)),
+    );
+  }
+
+  throw new Error(
+    "External network request failed: " +
+      (lastError instanceof Error ? lastError.message : "unknown error"),
+  );
+}
+
 function demoResult(input: AgentRequest): AgentResult {
   const sources: ResearchSource[] = [
     {
@@ -209,7 +236,19 @@ async function researchIncident(input: AgentRequest): Promise<ResearchSource[]> 
     tavilySearch(query),
   ]);
 
-  const merged = [...official, ...broad];
+  const officialSet = new Set(officialDomains);
+  const trustScore = (item: TavilyItem) => {
+    if (!item.url) return 0;
+    try {
+      const host = new URL(item.url).hostname;
+      if (host !== "github.com" && officialSet.has(host)) return 2;
+      if (host === "github.com" && officialSet.has(host)) return 1;
+    } catch {}
+    return 0;
+  };
+  const merged = [...official, ...broad].sort(
+    (a, b) => trustScore(b) - trustScore(a),
+  );
   const seen = new Set<string>();
   const sources: ResearchSource[] = [];
 
@@ -300,6 +339,7 @@ async function reasonWithNemotron(
       model,
       temperature: 0.1,
       max_tokens: 1800,
+      response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
