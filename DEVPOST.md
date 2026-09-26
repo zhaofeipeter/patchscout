@@ -44,3 +44,12 @@ The web product, real Tavily research, real NVIDIA Nemotron inference, repositor
 5. Show the Nemotron diagnosis and one-line route patch.
 6. Show before/after verification evidence and rollback.
 7. Show the live Token Factory Sandbox proof: baseline exit 1, patched exit 0, same `npm test` command.
+
+## Live demo
+https://patchscout-five.vercel.app/
+
+## Source code
+https://github.com/zhaofeipeter/patchscout
+
+## Production verification
+The deployed app reproduced the Express 5 fixture baseline failure (exit 1), applied the source-grounded structured edit in a Token Factory Sandbox, and reran the same npm test command to exit 0.

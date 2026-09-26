@@ -1,0 +1,13 @@
+﻿PatchScout production E2E verification
+Date: 2026-09-26
+Demo: https://patchscout-five.vercel.app/
+Fixture: https://github.com/zhaofeipeter/patchscout-fixture-express5
+Mode: live
+Sandbox status: executed
+Baseline exit: 1
+Patched exit: 0
+Verification: npm test
+Final test status: passed
+Research: Tavily official Express sources
+Reasoning: NVIDIA Nemotron 3 Super via Nebius Token Factory
+Execution: Nebius Token Factory Sandboxes / ConTree

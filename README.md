@@ -143,3 +143,9 @@ A model may propose a diagnosis. It cannot declare its own patch correct. Only e
 ## License
 
 MIT
+
+## Live deployment
+
+- Demo: https://patchscout-five.vercel.app/
+- Public fixture: https://github.com/zhaofeipeter/patchscout-fixture-express5
+- Production E2E: live Tavily + NVIDIA Nemotron + Nebius Token Factory Sandbox, baseline exit 1 -> patched exit 0, same npm test command.
