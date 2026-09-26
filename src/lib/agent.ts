@@ -877,6 +877,15 @@ export async function runPatchScout(input: AgentRequest): Promise<AgentResult> {
     sources,
     snapshot.context,
   );
+  if (!reasoning.edits.length) {
+    console.info("[PatchScout] stage=reason retry-empty-edits");
+    reasoning = await reasonWithNemotron(
+      input,
+      sources,
+      snapshot.context,
+      "The previous reasoning response produced no executable structured edits. Return at least one exact path/search/replace edit grounded in the repository snapshot, unless no safe edit exists.",
+    );
+  }
   console.info("[PatchScout] stage=reason done ms=" + (Date.now() - reasoningStarted) + " edits=" + reasoning.edits.length);
   steps.push({
     stage: "diagnose",
