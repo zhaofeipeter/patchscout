@@ -3,12 +3,12 @@
 import { FormEvent, useMemo, useState } from "react";
 import type { AgentResult, AgentStep } from "@/lib/types";
 
-const SAMPLE_REPO = "https://github.com/example/express5-wildcard-repro";
+const SAMPLE_REPO = "https://github.com/zhaofeipeter/patchscout-fixture-express5";
 const SAMPLE_INCIDENT = `Production boot fails immediately after upgrading Express 4 to Express 5.
 
 TypeError: Missing parameter name at 1: https://git.new/pathToRegexpError
 
-The service used app.all("*", fallbackHandler) as a catch-all route. Find the upstream change, propose the smallest safe fix, and tell me exactly how to verify it.`;
+The service used app.all("*", fallbackHandler) as a catch-all route. Find the upstream change, propose the smallest safe fix, and verify it with npm test.`;
 
 const stageLabels: Record<AgentStep["stage"], string> = {
   intake: "01",
@@ -396,6 +396,73 @@ export default function Home() {
                       ))}
                     </div>
                   </div>
+                  {result.sandbox ? (
+                    <div className="rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.035] p-5">
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                        <div className="eyebrow">Token Factory Sandbox</div>
+                        <span
+                          className={`rounded-full px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.12em] ${
+                            result.sandbox.status === "executed"
+                              ? "bg-emerald-300/15 text-emerald-200"
+                              : result.sandbox.status === "failed"
+                                ? "bg-rose-300/15 text-rose-200"
+                                : "bg-amber-200/10 text-amber-100"
+                          }`}
+                        >
+                          {result.sandbox.status}
+                        </span>
+                      </div>
+                      <p className="text-sm leading-6 text-white/60">
+                        {result.sandbox.message}
+                      </p>
+                      {result.sandbox.project ? (
+                        <div className="mt-3 font-mono text-[11px] text-white/30">
+                          project: {result.sandbox.project}
+                        </div>
+                      ) : null}
+                      {result.sandbox.operationId ? (
+                        <div className="mt-1 font-mono text-[11px] text-white/30">
+                          operation: {result.sandbox.operationId}
+                        </div>
+                      ) : null}
+                      {result.sandbox.baselineExit !== undefined ||
+                      result.sandbox.afterExit !== undefined ? (
+                        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                          <div className="rounded-xl border border-white/[0.06] bg-black/20 p-3">
+                            <div className="text-[10px] uppercase tracking-[0.14em] text-white/30">
+                              baseline exit
+                            </div>
+                            <div className="mt-1 font-mono text-lg text-rose-200">
+                              {String(result.sandbox.baselineExit)}
+                            </div>
+                          </div>
+                          <div className="rounded-xl border border-white/[0.06] bg-black/20 p-3">
+                            <div className="text-[10px] uppercase tracking-[0.14em] text-white/30">
+                              after exit
+                            </div>
+                            <div className="mt-1 font-mono text-lg text-emerald-200">
+                              {String(result.sandbox.afterExit)}
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+                      {result.sandbox.baselineOutput || result.sandbox.afterOutput ? (
+                        <pre className="mt-4 max-h-72 overflow-auto rounded-xl border border-white/[0.06] bg-[#020604] p-4 font-mono text-[11px] leading-5 text-white/45">
+                          {[
+                            result.sandbox.baselineOutput
+                              ? "BASELINE\n" + result.sandbox.baselineOutput
+                              : "",
+                            result.sandbox.afterOutput
+                              ? "AFTER\n" + result.sandbox.afterOutput
+                              : "",
+                          ]
+                            .filter(Boolean)
+                            .join("\n\n")}
+                        </pre>
+                      ) : null}
+                    </div>
+                  ) : null}
+
 
                   {result.sources.length ? (
                     <div>

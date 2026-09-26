@@ -48,4 +48,15 @@ export interface AgentResult {
   sources: ResearchSource[];
   steps: AgentStep[];
   rawModelOutput?: string;
+  sandbox?: {
+    status: "waiting-permission" | "ready" | "executed" | "failed";
+    message: string;
+    project?: string;
+    operationId?: string;
+    baselineExit?: number;
+    afterExit?: number;
+    baselineOutput?: string;
+    afterOutput?: string;
+    stderr?: string;
+  };
 }

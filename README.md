@@ -31,6 +31,7 @@ PatchScout is aimed primarily at:
 - NVIDIA Nemotron 3 Super via Nebius Token Factory
 - Tavily Search API
 - Nebius Token Factory Sandboxes / ConTree execution model
+- Official `contree-client` JavaScript SDK
 
 Default model:
 
@@ -54,7 +55,7 @@ Demo mode is the default when API credentials are absent. It renders a clearly l
 
 ### Live mode
 
-Live mode requires both a Nebius Token Factory key and a Tavily key:
+Live mode requires a Nebius Token Factory key. Tavily Search can run in official keyless mode; `TAVILY_API_KEY` is optional and used when available:
 
 ```bash
 PATCHSCOUT_MODE=live
@@ -62,7 +63,7 @@ NEBIUS_API_KEY=...
 TAVILY_API_KEY=...
 ```
 
-In live mode, the research and Nemotron diagnosis stages use real external services. Sandbox execution remains gated until Token Factory Sandboxes beta access is enabled for the account; the application reports that state explicitly instead of fabricating a pass.
+In live mode, Tavily research and Nemotron diagnosis use real external services. Token Factory Sandboxes access is active for the verified hackathon environment, and PatchScout executes the repository in isolated branchable microVM checkpoints using the official `contree-client` SDK.
 
 ## Local development
 
@@ -88,10 +89,13 @@ PATCHSCOUT_MODE=demo
 NEBIUS_API_KEY=
 NEBIUS_BASE_URL=https://api.tokenfactory.nebius.com/v1
 NEBIUS_MODEL=nvidia/nemotron-3-super-120b-a12b
+NEBIUS_PROJECT_ID=
 TAVILY_API_KEY=
+NEBIUS_SANDBOX_BASE_URL=https://api.tokenfactory.nebius.com/sandboxes
+OUTBOUND_PROXY_URL=
 ```
 
-Set `PATCHSCOUT_MODE=live` only after both service keys are configured.
+Set `PATCHSCOUT_MODE=live` after the Nebius key is configured. A Tavily key is recommended for stable production research; keyless mode remains a fallback. `OUTBOUND_PROXY_URL` is optional and only needed on local machines whose Node runtime requires an explicit outbound proxy.
 
 ## API
 
@@ -128,7 +132,7 @@ Current local checks:
 - production homepage — HTTP 200
 - demo `/api/agent` — PASS
 
-The final hackathon live demo will additionally require a real Token Factory key and Token Factory Sandboxes beta access so the repository can be cloned, branched, patched, and tested in the Nebius execution environment.
+Live end-to-end verification is complete on the public Express 5 fixture: PatchScout reproduced the failing baseline in Token Factory Sandboxes (exit 1), applied the structured edit to `src/app.js`, reran the same `npm test` command, and obtained exit 0. See [E2E_PROOF.md](./E2E_PROOF.md).
 
 ## Design principle
 

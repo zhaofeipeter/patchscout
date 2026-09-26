@@ -34,7 +34,7 @@ Coding & Agentic Engineering
 Best Use of Tavily
 
 ## Current implementation status
-The web product, deterministic demo transcript, Tavily adapter, Nemotron adapter, agent trace, build, lint, and production HTTP smoke test are complete. Live sandbox execution is connected only after the Nebius account receives Token Factory Sandboxes beta access; until then PatchScout explicitly labels execution as pending rather than simulating it as live.
+The web product, real Tavily research, real NVIDIA Nemotron inference, repository inspection, source-authority ranking, structured edits, bounded automatic repair, and Token Factory Sandbox execution are complete. The public Express 5 fixture now passes a real fail-before / pass-after run: baseline `npm test` exits 1, PatchScout edits `src/app.js`, and the same `npm test` exits 0 in a branchable Nebius sandbox checkpoint. Build and lint are green, and CI is included in the repository.
 
 ## Demo flow
 1. Open PatchScout.
@@ -43,4 +43,4 @@ The web product, deterministic demo transcript, Tavily adapter, Nemotron adapter
 4. Show the current-source evidence.
 5. Show the Nemotron diagnosis and one-line route patch.
 6. Show before/after verification evidence and rollback.
-7. Repeat in live mode once Token Factory key + Sandboxes access are active.
+7. Show the live Token Factory Sandbox proof: baseline exit 1, patched exit 0, same `npm test` command.
